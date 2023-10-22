@@ -20,7 +20,7 @@ function Adminapp({ applicationData, address }) {
         try {
             console.log("results.data")
             const results = await axios.post(
-              `http://localhost:4000/api/applications/${applicationData._id}/documents`,
+              `https://landdocs-backend-vkud.onrender.com/api/applications/${applicationData._id}/documents`,
               { address:"yu", documentName },
               {}
             );

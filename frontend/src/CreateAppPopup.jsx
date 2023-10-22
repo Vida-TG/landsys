@@ -17,7 +17,7 @@ function CreateAppPopup({onApplicationAdded, address}) {
   const handleApplicationSubmit = async () => {
     try {
         const results = await axios.post(
-            `http://localhost:4000/api/applications`,
+            `https://landdocs-backend-vkud.onrender.com/api/applications`,
             { address, applicationName },
             {}
         );
