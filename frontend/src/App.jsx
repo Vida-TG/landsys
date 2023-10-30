@@ -25,7 +25,7 @@ function App() {
   const checkDBForUser = async (address) => {
     try {
       const results = await axios.post(
-        `https://landdocs-backend-vkud.onrender.com/api/check-user`,
+        `http://localhost:4000/api/check-user`,
         { address },
         {}
       );
@@ -35,7 +35,7 @@ function App() {
       if(results.data.role == "admin") {
         try {
           const results = await axios.post(
-            `https://landdocs-backend-vkud.onrender.com/api/applications/admin`,
+            `http://localhost:4000/api/applications/admin`,
             { address },
             {}
           );

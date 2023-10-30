@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import axios from 'axios';
+import cloudinary from 'cloudinary';
+
+
+cloudinary.config({
+  cloud_name: 'dvuzscy9c',
+  api_key: '752753436834878',
+  api_secret: '_BjKO1558GxI3lnfQQRIju4V3CQ',
+});
 
 function Application({ applicationData }) {
   const [showSModal, setShowSModal] = useState(false);
@@ -23,8 +31,8 @@ function Application({ applicationData }) {
   const handleApplicationSubmit = async () => {
     try {
       const results = await axios.post(
-        `https://landdocs-backend-vkud.onrender.com/api/applications`,
-        { address, applicationName },
+        `http://localhost:4000/api/applications`,
+        { address:"yu", applicationName },
         {}
       );
  
@@ -48,15 +56,29 @@ function Application({ applicationData }) {
     setSelectedFiles(newSelectedFiles);
   };
 
+
   const handleFileUpload = async (documentIndex) => {
     if (selectedFiles[documentIndex]) {
       setUploading(true);
-      console.log("upload")
-      // Cloudinary selectedFiles[documentIndex]
 
-      setUploading(false);
+      const file = selectedFiles[documentIndex][0];
+
+      try {
+        const uploadResponse = await cloudinary.v2.uploader.upload(file.path, {
+          folder: 'land_docs',
+        });
+
+        const fileUrl = uploadResponse.secure_url;
+        console.log('File uploaded:', fileUrl);
+        // Now you can do something with the uploaded URL, e.g., save it to your database or display it to the user
+
+        setUploading(false);
+      } catch (error) {
+        console.error('Error uploading file to Cloudinary:', error);
+        setUploading(false);
+      }
     }
-  };
+  }
 
   return (
     <div className="wrap">
@@ -68,6 +90,7 @@ function Application({ applicationData }) {
           <p style={{ marginTop: "20px", marginBottom: "10px", color: "#fff", fontSize: "17px", fontFamily: "monospace" }}>
             {applicationData.documents.length} pending document submission(s)
             <br /><br />
+            Fee: {applicationData.fee}
             Status: {applicationData.status}
           </p>
           <br />

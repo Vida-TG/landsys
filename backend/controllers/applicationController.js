@@ -153,7 +153,7 @@ const updateApplication = async (req, res) => {
       return res.status(404).json({ error: 'Application not found' });
     }
 
-    application.price = price;
+    application.fee = price || application.fee;
     application.status = status || "Pending";
 
     await application.save();

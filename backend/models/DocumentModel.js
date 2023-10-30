@@ -8,6 +8,9 @@ const documentSchema = new mongoose.Schema({
   document: {
     type: String,
   },
+  url: {
+    type: String,
+  },
 });
 
 const Document = mongoose.model('Document', documentSchema);

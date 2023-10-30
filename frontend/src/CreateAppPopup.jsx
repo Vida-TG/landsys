@@ -17,8 +17,8 @@ function CreateAppPopup({onApplicationAdded, address}) {
   const handleApplicationSubmit = async () => {
     try {
         const results = await axios.post(
-            `https://landdocs-backend-vkud.onrender.com/api/applications`,
-            { address, applicationName },
+            `http://localhost:4000/api/applications`,
+            { address:"yu", applicationName },
             {}
         );
         setApplicationName("")
@@ -39,13 +39,14 @@ function CreateAppPopup({onApplicationAdded, address}) {
             <div className="create-app-popup">
                 <h2>What are you applying for?</h2>
                 <div className='create-app-box'>
-                    <input
-                        type="text"
-                        value={applicationName}
-                        onChange={(e) => setApplicationName(e.target.value)}
-                        placeholder="Enter application name"
-                        className='app-name-input'
-                    />
+                    <select onChange={(e) => setApplicationName(e.target.value)} className='app-name-input' style={{width:"35%", padding:"5px", cursor:"pointer"}}>
+                      <option>Regularization</option>
+                      <option>Land purchase receipt</option>
+                      <option>Certificate of occupancy</option>
+                      <option>Deed of lease</option>
+                      <option>Deed of gift</option>
+                      <option>Deed of mortgage</option>
+                    </select>
                 </div>
                 <button id="submitApplication" onClick={handleApplicationSubmit}>Submit</button>
                 <button id="closeCAPopup" onClick={closePopup}>Close</button>

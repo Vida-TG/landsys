@@ -20,7 +20,7 @@ function Adminapp({ applicationData, address }) {
         try {
             console.log("results.data")
             const results = await axios.post(
-              `https://landdocs-backend-vkud.onrender.com/api/applications/${applicationData._id}/documents`,
+              `http://localhost:4000/api/applications/${applicationData._id}/documents`,
               { address:"yu", documentName },
               {}
             );
@@ -66,18 +66,17 @@ function Adminapp({ applicationData, address }) {
           <div className="contentheading">
               <h3>{applicationData.applicationName}</h3>
           </div>
-          <div className="stakeform">
-              <p style={{marginTop:"5px", marginBottom:"10px", color:"#fff", fontSize:"17px", fontFamily:"monospace"}}>
+          <div className="stakeform" style={{marginTop:"5px", marginBottom:"10px", color:"#fff", fontSize:"17px", fontFamily:"monospace"}}>
                 <input
                     type="text"
                     placeholder="Document Name"
                     value={documentName}
                     onChange={(e) => setDocumentName(e.target.value)}
-                    style={{width:"50%", marginRight:"5px", marginBottom:"5px", padding:"5px"}}
+                    style={{width:"50%", marginRight:"2px", marginBottom:"5px", padding:"5px"}}
                 />
                 { nameLoading ? <button style={{width:"40%", marginBottom:"5px", padding:"5px"}}>Loading...</button>
                  :
-                <button className="pointer" onClick={handleAddDocument} style={{width:"40%", marginBottom:"5px", padding:"5px", cursor:"pointer"}}>Add Document</button>
+                <button onClick={handleAddDocument} style={{width:"40%", marginBottom:"5px", padding:"5px", cursor:"pointer"}}>Add Document</button>
                 }
                 <br/>
                 <input
@@ -85,7 +84,7 @@ function Adminapp({ applicationData, address }) {
                     placeholder="Price"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    style={{width:"50%", marginRight:"5px", marginBottom:"5px", padding:"5px"}}
+                    style={{width:"50%", marginRight:"2px", marginBottom:"5px", padding:"5px"}}
                 />
                 { priceLoading ? <button style={{width:"40%", marginBottom:"5px", padding:"5px"}}>Loading...</button>
                  :
@@ -98,7 +97,6 @@ function Adminapp({ applicationData, address }) {
                     <option>Approved</option>
                     <option>Rejected</option>
                 </select>
-              </p>
               <br/>
               <button onClick={handleSavePrice} id="claimRewardsBtn">Save all</button>
           </div>
