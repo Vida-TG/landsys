@@ -7,7 +7,7 @@ const checkUser = async (req, res) => {
   try {
     const { address } = req.body;
 
-    const existingUser = await User.findOne({ address });
+    const existingUser = await User.findOne({ address: new RegExp(address, 'i') });
 
     if (existingUser) {
       const user = await User.findById(existingUser._id)
@@ -17,7 +17,6 @@ const checkUser = async (req, res) => {
             path: 'documents',
           },
         });
-
       res.json({
         isNewUser: false,
         address: user.address,
@@ -46,17 +45,19 @@ const checkUser = async (req, res) => {
 
 const makeUserAdmin = async (req, res) => {
   try {
-    const { address } = req.params;
-    const user = await User.findOne({ address });
+    console.log("THISS")
+    const { adminAddress } = req.body;
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      const user = new User({ address:adminAddress });
+      await user.save();
     }
 
     user.role = 'admin';
     await user.save();
-
-    res.json({ message: 'User is now an admin' });
+    console.log("addedddd")
+    res.json({ status: 'success', message: 'User is now an admin' });
   } catch (error) {
     res.status(500).json({ error: 'Admin role assignment failed' });
   }
@@ -77,7 +78,7 @@ const createUser = async (req, res) => {
 
 const getUser = async (req, res) => {
   try {
-    const user = await User.findOne({ address: req.params.address });
+    const user = await User.findOne({ address: new RegExp(req.params.address, 'i') });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -89,7 +90,7 @@ const getUser = async (req, res) => {
 
 const getUserApplications = async (req, res) => {
   try {
-    const user = await User.findOne({ address: req.params.address }).populate('applications');
+    const user = await User.findOne({ address: new RegExp(req.params.address, 'i') }).populate('applications');
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

@@ -6,24 +6,58 @@ const applicationSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  applicationName: {
+  appType: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Requirement',
+  },
+  ownerFullName: {
     type: String,
-    required: true,
+  },
+  ownerAddress: {
+    type: String,
+  },
+  prevOwnerType: {
+    type: String,
+  },
+  developed: {
+    type: Boolean,
+  },
+  occupied: {
+    type: Boolean,
+  },
+  residentType: {
+    type: String,
+  },
+  sizeSqm: {
+    type: Number,
+  },
+  location: {
+    type: String,
+  },
+  createDate: {
+    type: Date,
+    default: Date.now,
+  },
+  lastUpdated: {
+    type: Date,
   },
   applicationHash: {
     type: String,
   },
-  fee: {
-    type: Number,
-  },
-  status: {
-    type: String,
-    enum: ['Requested', 'Pending', 'Approved', 'Rejected'],
-    default: 'Requested',
-  },
   comments: {
     type: String,
   },
+  status: {
+    type: String,
+    enum: ['Pending', 'Approved', 'ActionNeeded', 'Completed'],
+    default: 'Pending',
+  },
+  recordLog: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TransactionLog',
+    },
+  ],
   documents: [
     {
       type: mongoose.Schema.Types.ObjectId,

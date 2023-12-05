@@ -1,25 +1,119 @@
 const Application = require('../models/ApplicationModel.js');
+const Requirement = require('../models/RequirementModel.js');
 const Document = require('../models/DocumentModel.js');
 const User = require('../models/UserModel.js');
+const TransactionLog = require('../models/LogModel.js')
 
 
- const createApplication = async (req, res) => {
+
+
+const createApplication = async (req, res) => {
   try {
-    const { address, applicationName } = req.body;
-    const user = await User.findOne({ address });
-    
+    const { address, applicationName, documentsURL, ownerFullName, ownerAddress, prevOwnerType, developed, occupied, residentType, sizeSqm, location } = req.body;
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
+    const requirement = await Requirement.findOne({applicationName})
+
+    const createdDocuments = [];
+
+    for (const [documentName, url] of Object.entries(documentsURL)) {
+      const document = new Document({
+        user: user._id,
+        document: documentName,
+        url: url,
+      });
+
+      await document.save();
+      createdDocuments.push(document);
+    }
+
     const application = new Application({
       userId: user._id,
-      applicationName,
+      appType: requirement._id,
+      ownerFullName,
+      ownerAddress,
+      prevOwnerType,
+      developed,
+      occupied,
+      residentType,
+      sizeSqm,
+      location,
+      documents: createdDocuments.map((doc) => doc._id),
     });
+
+    console.log(application)
     
+    const transactionLog = new TransactionLog({
+      appId: application._id,
+      data: "Application created"
+    })
+
+    await transactionLog.save()
+
     await application.save();
+
     user.applications.push(application);
     await user.save();
 
-    res.json({ application });
+    res.json({ message: 'success', application });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Application creation failed' });
+  }
+};
+
+
+
+const updateApplication = async (req, res) => {
+  try {
+
+    const { address, documentsURL, ownerFullName, ownerAddress, prevOwnerType, developed, occupied, residentType, sizeSqm, location } = req.body;
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
+    const { appId } = req.params;
+
+    const application = await Application.findById(appId);
+
+    const createdDocuments = [];
+
+    for (const [documentName, url] of Object.entries(documentsURL)) {
+      const document = new Document({
+        user: user._id,
+        document: documentName,
+        url: url,
+      });
+
+      await document.save();
+      createdDocuments.push(document);
+    }
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    application.ownerFullName = ownerFullName || application.ownerFullName
+    application.ownerAddress = ownerAddress || application.ownerAddress
+    application.prevOwnerType = prevOwnerType || application.prevOwnerType
+    application.developed = developed || application.developed
+    application.occupied = occupied || application.occupied
+    application.residentType = residentType || application.residentType
+    application.sizeSqm = sizeSqm || application.sizeSqm
+    application.location = location || application.location
+    application.documents = createdDocuments.map((doc) => doc._id)
+
+    application.status = "Pending"
+    const transactionLog = new TransactionLog({
+      appId: application._id,
+      data: "Application updated by user"
+    })
+
+    await transactionLog.save()
+
+    console.log(application)
+    await application.save();
+
+    res.json({ status: 'success', message: 'Saved successfully' });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Could not be saved' });
   }
 };
 
@@ -28,8 +122,10 @@ const User = require('../models/UserModel.js');
 const getMyApplications = async (req, res) => {
     try {
       const { address } = req.body;
-      const user = await User.findOne({ address });
-      const applications = await Application.find({userId: user._id}).populate('userId').populate('documents');
+      const user = await User.findOne({ address: new RegExp(address, 'i') });
+      console.log(address, user._id)
+      const applications = await Application.find({userId: user._id}).populate('userId').populate('appType').populate('documents');
+      console.log(applications)
       res.json(applications);
     } catch (error) {
       res.status(500).json({ error: 'Failed to retrieve applications' });
@@ -40,15 +136,33 @@ const getApplication = async (req, res) => {
   try {
     const { address } = req.body;
     const { appId } = req.params;
-    const user = await User.findOne({ address });
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
     
-    const application = await Application.findOne({ _id: appId, userId: user._id });
+    let application = await Application.findById(appId)
+    .populate({
+      path: 'appType',
+      populate: {
+        path: 'requiredDocuments',
+      },
+    })
+    .populate('userId')
+    .populate('documents')
+    .exec();
+
+    const logs = await TransactionLog.find({ appId })
+      .populate('adminId')
+      .sort({ date: 1 });
+
+    if (user.role != "admin" && application.userId._id.toString() !== user._id.toString()) {
+      application = null
+    }
+    console.log(application.createDate)
 
     if (!application) {
       return res.status(404).json({ error: 'Application not found or user is not the owner' });
     }
 
-    res.json(application);
+    res.json({application, logs});
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve the application' });
   }
@@ -58,7 +172,7 @@ const getApplication = async (req, res) => {
 
 const getAllApplications = async (req, res) => {
   try {
-    const applications = await Application.aggregate([
+    const applicationsByStatus = await Application.aggregate([
       {
         $group: {
           _id: '$status',
@@ -68,19 +182,45 @@ const getAllApplications = async (req, res) => {
     ]);
 
     const groupedApplications = {};
-    const allStatusTypes = ['Requested', 'Pending', 'Approved', 'Rejected'];
+    const allStatusTypes = ['Pending', 'Approved', 'ActionNeeded', 'Completed'];
 
-    allStatusTypes.forEach(async (status) => {
+    allStatusTypes.forEach((status) => {
       groupedApplications[status] = {
         count: 0,
         applications: [],
       };
     });
 
+    const recentApplications = await Application.find()
+      .sort({ createDate: -1 })
+      .limit(25)
+      .populate('documents')
+      .populate({
+        path: 'appType',
+        populate: {
+          path: 'requiredDocuments',
+          model: 'RequiredDocument',
+        },
+      });
+
+    groupedApplications.recent = {
+      applications: recentApplications,
+    };
+
     const populatedApplications = await Promise.all(
-      applications.map(async (group) => {
+      applicationsByStatus.map(async (group) => {
         const status = group._id || 'None';
-        const applications = await Application.populate(group.applications, 'documents');
+        const applications = await Application.populate(group.applications, [
+          { path: 'documents' },
+          {
+            path: 'appType',
+            populate: {
+              path: 'requiredDocuments',
+              model: 'RequiredDocument',
+            },
+          },
+        ]);
+
         return {
           status,
           applications,
@@ -97,12 +237,52 @@ const getAllApplications = async (req, res) => {
 
     res.json(groupedApplications);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to retrieve applications' });
   }
 };
 
 
-  
+
+
+
+
+
+
+
+
+
+
+
+
+const getApplicationStatistics = async (req, res) => {
+  try {
+    const totalApplications = await Application.countDocuments();
+    const pendingApplications = await Application.countDocuments({ status: 'Pending' });
+    const totalUsers = await User.countDocuments();
+
+    const recentApplications = await Application.find()
+      .sort({ createDate: -1 })
+      .limit(20)
+      .populate('appType');
+    const recentUsers = await User.find()
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    res.json({
+      totalApplications,
+      pendingApplications,
+      totalUsers,
+      recentApplications,
+      recentUsers,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve application statistics' });
+  }
+};
+
+
+
 
 const approveApplication = async (req, res) => {
     try {
@@ -139,32 +319,6 @@ const rejectApplication = async (req, res) => {
       res.status(500).json({ error: 'Rejection failed' });
     }
 };
-  
-
-
-const updateApplication = async (req, res) => {
-  try {
-    const { appId } = req.params;
-    const { price, status } = req.body;
-
-    const application = await Application.findById(appId);
-
-    if (!application) {
-      return res.status(404).json({ error: 'Application not found' });
-    }
-
-    application.fee = price || application.fee;
-    application.status = status || "Pending";
-
-    await application.save();
-
-    res.json({ status: 'success', message: 'Saved successfully' });
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error', message: 'Could not be saved' });
-  }
-};
-
 
 
 const uploadDocumentToApplication = async (req, res) => {
@@ -213,5 +367,27 @@ const getDocumentsForApplication = async (req, res) => {
     }
 };
 
+const updateApplicationStatus = async (req, res) => {
+  try {
+    const { status, comments,address } = req.body;
+    const { appId } = req.params;
+    const application = await Application.findByIdAndUpdate(appId, { status, comments });
 
-module.exports = { createApplication, updateApplication, getApplication, getMyApplications, getAllApplications, approveApplication, rejectApplication, uploadDocumentToApplication, getDocumentsForApplication }
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
+    
+    const transactionLog = new TransactionLog({
+      appId: application._id,
+      data: "Application status updated",
+      adminId: user._id
+    })
+
+    await transactionLog.save()
+
+    res.status(200).json({ success: true, message: 'Application status updated successfully', application });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update application status' });
+  }
+};
+
+
+module.exports = { createApplication, updateApplication, getApplication, getMyApplications, getAllApplications, getApplicationStatistics, approveApplication, rejectApplication, uploadDocumentToApplication, getDocumentsForApplication, updateApplicationStatus }
