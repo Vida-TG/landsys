@@ -4,8 +4,9 @@ const User = require('../models/UserModel.js');
 const checkUserRole = async (req, res, next) => {
   try {
     const { address } = req.body;
-    const user = await User.findOne({ address });
+    const user = await User.findOne({ address: new RegExp(address, 'i') });
 
+    console.log(address)
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

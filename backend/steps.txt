@@ -1,1 +1,4 @@
 checkUser - /check-user
+
+http://localhost:4000/
+https://landdocs-backend-vkud.onrender.com/

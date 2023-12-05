@@ -8,6 +8,14 @@ const documentSchema = new mongoose.Schema({
   document: {
     type: String,
   },
+  url: {
+    type: String,
+  },
+  status: {
+    type: String,
+    enum: ['Pending', 'Approved', 'ActionNeeded', 'Completed'],
+    default: 'Pending',
+  },
 });
 
 const Document = mongoose.model('Document', documentSchema);
